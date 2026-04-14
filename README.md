@@ -1,7 +1,12 @@
-# server
+# cloudiful-server
 
 Single crate server bootstrap library with shared config/TLS handling and
 feature-gated Actix/Axum adapters.
+
+Published to:
+
+- crates.io as `cloudiful-server`
+- Kellnr as `cloudiful-server`
 
 ## Features
 
@@ -12,7 +17,7 @@ feature-gated Actix/Axum adapters.
 
 ```rust
 use actix_web::{HttpResponse, web};
-use server::{CorsConfig, Server, ServerConfig};
+use cloudiful_server::{CorsConfig, Server, ServerConfig};
 
 #[derive(Debug)]
 struct AppState {
@@ -48,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```rust
 use axum::{Router, extract::State, routing::get};
-use server::{CorsConfig, ServerConfig};
+use cloudiful_server::{CorsConfig, ServerConfig};
 
 #[derive(Clone)]
 struct AppState {
@@ -70,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         get(|State(state): State<AppState>| async move { format!("{} ok", state.service_name) }),
     );
 
-    server::axum::Server::new_with_state(config, app)
+    cloudiful_server::axum::Server::new_with_state(config, app)
         .start()
         .await?;
 

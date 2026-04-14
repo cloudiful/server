@@ -1,8 +1,0 @@
-stages:
-  - test
-  - publish
-
-include:
-  - component: $CI_SERVER_FQDN/ci-component/rust/test@main
-  - component: $CI_SERVER_FQDN/ci-component/rust/publish@main
-  
