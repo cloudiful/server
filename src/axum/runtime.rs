@@ -26,6 +26,7 @@ impl BoundServer {
     pub async fn run(self) -> Result<(), ServerError> {
         if let Some(tls_config) = self.tls_config {
             axum_server::from_tcp_rustls(self.listener, tls_config)
+                .map_err(ServerError::from)?
                 .serve(self.app.into_make_service())
                 .await
                 .map_err(ServerError::from)
@@ -56,6 +57,7 @@ impl BoundServer {
             });
 
             axum_server::from_tcp_rustls(self.listener, tls_config)
+                .map_err(ServerError::from)?
                 .handle(handle)
                 .serve(self.app.into_make_service())
                 .await
