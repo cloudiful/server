@@ -9,7 +9,6 @@ repository = "https://github.com/cloudiful/server"
 documentation = "https://docs.rs/cloudiful-server"
 keywords = ["server", "actix", "axum", "tls", "bootstrap"]
 categories = ["web-programming", "network-programming", "asynchronous"]
-publish = ["crates-io", "kellnr"]
 
 [features]
 default = ["actix"]
