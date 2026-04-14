@@ -1,0 +1,87 @@
+# server
+
+Single crate server bootstrap library with shared config/TLS handling and
+feature-gated Actix/Axum adapters.
+
+## Features
+
+- `actix` is enabled by default and keeps the existing `Server::new(config, |cfg| ...)` API
+- `axum` adds `server::axum::Server` with native `Router` and `with_state` support
+
+## Actix example
+
+```rust
+use actix_web::{HttpResponse, web};
+use server::{CorsConfig, Server, ServerConfig};
+
+#[derive(Debug)]
+struct AppState {
+    service_name: String,
+}
+
+#[actix_web::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let config = ServerConfig::new()
+        .with_listen_addr("127.0.0.1:3000")
+        .with_app_data(web::Data::new(AppState {
+            service_name: "orders".to_string(),
+        }))
+        .with_cors(CorsConfig::restricted(["https://intranet.example.com"]))
+        .build()?;
+
+    Server::new(config, |cfg| {
+        cfg.route(
+            "/health",
+            web::get().to(|state: web::Data<AppState>| async move {
+                HttpResponse::Ok().body(format!("{} ok", state.service_name))
+            }),
+        );
+    })
+    .start()
+    .await?;
+
+    Ok(())
+}
+```
+
+## Axum example
+
+```rust
+use axum::{Router, extract::State, routing::get};
+use server::{CorsConfig, ServerConfig};
+
+#[derive(Clone)]
+struct AppState {
+    service_name: String,
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let config = ServerConfig::new()
+        .with_listen_addr("127.0.0.1:3000")
+        .with_app_data(AppState {
+            service_name: "orders".to_string(),
+        })
+        .with_cors(CorsConfig::restricted(["https://intranet.example.com"]))
+        .build()?;
+
+    let app = Router::new().route(
+        "/health",
+        get(|State(state): State<AppState>| async move { format!("{} ok", state.service_name) }),
+    );
+
+    server::axum::Server::new_with_state(config, app)
+        .start()
+        .await?;
+
+    Ok(())
+}
+```
+
+## Testing
+
+```bash
+cargo test
+cargo test --no-default-features --features axum
+cargo test --all-features
+```
