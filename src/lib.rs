@@ -4,6 +4,8 @@ mod core;
 pub mod actix;
 #[cfg(feature = "axum")]
 pub mod axum;
+#[cfg(feature = "mcp")]
+pub mod mcp;
 
 pub use core::{
     CorsConfig, DEFAULT_LISTEN_ADDR, ServerConfig, ServerConfigError, ServerError, TlsConfig,

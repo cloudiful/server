@@ -1,7 +1,7 @@
 # cloudiful-server
 
 Single crate server bootstrap library with shared config/TLS handling and
-feature-gated Actix/Axum adapters.
+feature-gated Actix/Axum/MCP adapters.
 
 Published to:
 
@@ -12,6 +12,7 @@ Published to:
 
 - `actix` is enabled by default and keeps the existing `Server::new(config, |cfg| ...)` API
 - `axum` adds `server::axum::Server` with native `Router` and `with_state` support
+- `mcp` adds stdio MCP helpers plus a streamable HTTP MCP server wrapper
 
 ## Actix example
 
@@ -83,10 +84,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+## MCP stdio example
+
+```rust
+use cloudiful_server::mcp::{self, tool, tool_router};
+
+#[derive(Clone)]
+struct Calculator;
+
+#[tool_router(server_handler)]
+impl Calculator {
+    #[tool(description = "Add two numbers")]
+    fn add(&self, a: i32, b: i32) -> String {
+        (a + b).to_string()
+    }
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let server = mcp::serve_stdio(Calculator).await?;
+    server.waiting().await?;
+    Ok(())
+}
+```
+
+## MCP streamable HTTP example
+
+```rust
+use cloudiful_server::{
+    ServerConfig,
+    mcp::{self, tool, tool_router},
+};
+
+#[derive(Clone)]
+struct Calculator;
+
+#[tool_router(server_handler)]
+impl Calculator {
+    #[tool(description = "Add two numbers")]
+    fn add(&self, a: i32, b: i32) -> String {
+        (a + b).to_string()
+    }
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let config = ServerConfig::new()
+        .with_listen_addr("127.0.0.1:8000")
+        .build()?;
+
+    mcp::Server::new(config, || Calculator)
+        .with_server_config(mcp::ServerConfig::new().with_service_path("/mcp"))
+        .start()
+        .await?;
+
+    Ok(())
+}
+```
+
 ## Testing
 
 ```bash
 cargo test
+cargo test --features mcp
 cargo test --no-default-features --features axum
 cargo test --all-features
 ```
