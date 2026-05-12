@@ -1,4 +1,10 @@
+use axum::{
+    Router,
+    body::Body,
+    http::{Request, StatusCode},
+};
 use rmcp::ServiceExt;
+use tower::ServiceExt as TowerServiceExt;
 
 use crate::{
     ServerConfig as HttpServerConfig,
@@ -51,14 +57,76 @@ async fn streamable_http_server_binds_on_loopback() {
 }
 
 #[tokio::test]
-async fn invalid_service_path_is_rejected() {
+async fn service_path_is_normalized_for_http_router() {
+    let response = crate::mcp::router(
+        crate::mcp::ServerConfig::new().with_service_path("mcp/"),
+        || PingServer,
+    )
+    .unwrap()
+    .oneshot(
+        Request::builder()
+            .uri("/mcp")
+            .header("host", "not-loopback.example")
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await
+    .unwrap();
+
+    assert_ne!(response.status(), StatusCode::NOT_FOUND);
+    assert_ne!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn root_service_path_is_accepted() {
+    let response = crate::mcp::router(
+        crate::mcp::ServerConfig::new().with_service_path("/"),
+        || PingServer,
+    )
+    .unwrap()
+    .oneshot(
+        Request::builder()
+            .uri("/")
+            .header("host", "not-loopback.example")
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await
+    .unwrap();
+
+    assert_ne!(response.status(), StatusCode::NOT_FOUND);
+    assert_ne!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn service_can_be_nested_in_existing_router() {
+    let service = crate::mcp::service(crate::mcp::ServerConfig::new(), || PingServer).unwrap();
+    let app = Router::new().nest_service("/mcp", service);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/mcp")
+                .header("host", "not-loopback.example")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_ne!(response.status(), StatusCode::NOT_FOUND);
+    assert_ne!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn empty_service_path_is_rejected() {
     let config = HttpServerConfig::new()
         .with_listen_addr("127.0.0.1:0")
         .build()
         .unwrap();
 
     let err = Server::new(config, || PingServer)
-        .with_server_config(crate::mcp::ServerConfig::new().with_service_path("mcp"))
+        .with_server_config(crate::mcp::ServerConfig::new().with_service_path(" "))
         .bind()
         .unwrap_err();
 

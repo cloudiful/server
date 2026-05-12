@@ -3,7 +3,7 @@ mod http;
 #[cfg(test)]
 mod tests;
 
-pub use http::{BoundServer, Server, ServerConfig};
+pub use http::{BoundServer, Server, ServerConfig, router, service};
 
 pub use rmcp::{
     ErrorData as McpError, RoleServer, ServerHandler, ServiceExt, prompt, prompt_handler,

@@ -1,6 +1,6 @@
 [package]
 name = "cloudiful-server"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2024"
 description = "Rust web server bootstrap crate with Actix and Axum adapters"
 readme = "README.md"
@@ -14,7 +14,7 @@ categories = ["web-programming", "network-programming", "asynchronous"]
 default = ["actix"]
 actix = ["dep:actix-cors", "dep:actix-web"]
 axum = ["dep:axum", "dep:axum-server", "dep:tower-http", "dep:tokio"]
-mcp = ["dep:axum", "dep:axum-server", "dep:rmcp", "dep:tokio"]
+mcp = ["dep:axum", "dep:axum-server", "dep:rmcp", "dep:tokio", "dep:tokio-util"]
 
 [dependencies]
 actix-cors = { version = "0.7.1", optional = true }
@@ -26,6 +26,7 @@ log = "0.4.29"
 rustls = "0.23.40"
 rustls-pemfile = "2.2.0"
 tokio = { version = "1.52.3", optional = true, features = [ "io-util", "macros", "net", "rt-multi-thread", "sync", "time" ] }
+tokio-util = { version = "0.7", optional = true }
 tower-http = { version = "0.6", features = ["cors"], optional = true }
 rmcp = { version = "1.6.0", optional = true, features = [ "server", "schemars", "transport-io", "transport-streamable-http-server", "transport-streamable-http-server-session" ] }
 
