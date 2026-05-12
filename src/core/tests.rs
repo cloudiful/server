@@ -1,6 +1,6 @@
 use crate::{
     CorsConfig, ServerConfig, ServerConfigError, ServerError, TlsConfig, TlsConfigLoadError,
-    load_tls_config,
+    load_tls_config, normalize_listen_addr,
 };
 
 #[test]
@@ -22,6 +22,22 @@ fn allows_http_configuration_without_tls() {
 
     assert_eq!(config.listen_addr(), "127.0.0.1:8081");
     assert!(!config.tls_enabled());
+}
+
+#[test]
+fn listen_addr_with_only_port_uses_wildcard_host() {
+    let config = ServerConfig::new()
+        .with_listen_addr(":8081")
+        .build()
+        .unwrap();
+
+    assert_eq!(config.listen_addr(), "0.0.0.0:8081");
+}
+
+#[test]
+fn normalize_listen_addr_preserves_explicit_host() {
+    assert_eq!(normalize_listen_addr("127.0.0.1:8081"), "127.0.0.1:8081");
+    assert_eq!(normalize_listen_addr(" 0.0.0.0:8081 "), "0.0.0.0:8081");
 }
 
 #[test]

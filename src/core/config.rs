@@ -191,7 +191,7 @@ impl ServerConfig<()> {
 
 impl<U> ServerConfig<U> {
     pub fn with_listen_addr(mut self, listen_addr: impl Into<String>) -> Self {
-        self.listen_addr = listen_addr.into();
+        self.listen_addr = normalize_listen_addr(listen_addr);
         self
     }
 
@@ -228,6 +228,16 @@ impl<U> ServerConfig<U> {
             cors: self.cors,
             tls,
         })
+    }
+}
+
+pub fn normalize_listen_addr(listen_addr: impl Into<String>) -> String {
+    let listen_addr = listen_addr.into();
+    let trimmed = listen_addr.trim();
+    if trimmed.starts_with(':') {
+        format!("0.0.0.0{trimmed}")
+    } else {
+        trimmed.to_string()
     }
 }
 

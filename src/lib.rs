@@ -9,7 +9,7 @@ pub mod mcp;
 
 pub use core::{
     CorsConfig, DEFAULT_LISTEN_ADDR, ServerConfig, ServerConfigError, ServerError, TlsConfig,
-    TlsConfigLoadError, ValidatedServerConfig, load_tls_config,
+    TlsConfigLoadError, ValidatedServerConfig, load_tls_config, normalize_listen_addr,
 };
 
 #[cfg(feature = "actix")]

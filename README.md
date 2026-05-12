@@ -21,6 +21,8 @@ let config = ServerConfig::new()
     .build()?;
 ```
 
+Listen addresses like `:8080` are normalized to `0.0.0.0:8080`.
+
 TLS is opt-in:
 
 ```rust
