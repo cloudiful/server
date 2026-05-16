@@ -9,6 +9,7 @@ application routing.
 - Default: `actix`
 - `axum`: Axum `Router` startup with optional shared state
 - `mcp`: rmcp stdio helpers plus Streamable HTTP service, router, and server helpers
+- `tls`: omit `tls` for plain HTTP, set `cert_path` + `cert_key_path` for server TLS, and add `client_ca` for mTLS
 
 ## Core Config
 
@@ -36,6 +37,25 @@ let config = ServerConfig::new()
     )
     .build()?;
 ```
+
+mTLS uses the same `TlsConfig` with an extra client CA bundle:
+
+```rust
+use cloudiful_server::{ServerConfig, TlsConfig};
+
+let config = ServerConfig::new()
+    .with_tls(
+        TlsConfig::new()
+            .with_cert_path("/etc/cloudiful/tls/server.crt")
+            .with_cert_key_path("/etc/cloudiful/tls/server.key")
+            .with_client_ca("/etc/cloudiful/tls/client-ca.crt"),
+    )
+    .build()?;
+```
+
+When `client_ca` is not configured, startup keeps the existing server-only TLS behavior.
+When `client_ca` is configured, the server requests and verifies client certificates
+against that CA bundle.
 
 ## Actix
 

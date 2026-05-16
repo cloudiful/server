@@ -55,9 +55,21 @@ pub enum TlsConfigLoadError {
         path: PathBuf,
         source: std::io::Error,
     },
+    OpenClientCa {
+        path: PathBuf,
+        source: std::io::Error,
+    },
+    ReadClientCa {
+        path: PathBuf,
+        source: std::io::Error,
+    },
     ReadPrivateKey {
         path: PathBuf,
         source: std::io::Error,
+    },
+    InvalidClientCa {
+        path: PathBuf,
+        source: rustls::Error,
     },
     MissingPrivateKey {
         path: PathBuf,
@@ -91,10 +103,31 @@ impl fmt::Display for TlsConfigLoadError {
                     path.display()
                 )
             }
+            Self::OpenClientCa { path, source } => {
+                write!(
+                    f,
+                    "failed to open TLS client CA at {}: {source}",
+                    path.display()
+                )
+            }
+            Self::ReadClientCa { path, source } => {
+                write!(
+                    f,
+                    "failed to read TLS client CA certificates from {}: {source}",
+                    path.display()
+                )
+            }
             Self::ReadPrivateKey { path, source } => {
                 write!(
                     f,
                     "failed to read TLS private key from {}: {source}",
+                    path.display()
+                )
+            }
+            Self::InvalidClientCa { path, source } => {
+                write!(
+                    f,
+                    "failed to build TLS client certificate verifier from {}: {source}",
                     path.display()
                 )
             }
@@ -114,8 +147,11 @@ impl std::error::Error for TlsConfigLoadError {
             Self::OpenCertificate { source, .. }
             | Self::ReadCertificates { source, .. }
             | Self::OpenPrivateKey { source, .. }
+            | Self::OpenClientCa { source, .. }
+            | Self::ReadClientCa { source, .. }
             | Self::ReadPrivateKey { source, .. } => Some(source),
             Self::InvalidConfig { source } => Some(source),
+            Self::InvalidClientCa { source, .. } => Some(source),
             Self::MissingPrivateKey { .. } => None,
         }
     }

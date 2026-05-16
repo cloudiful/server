@@ -112,6 +112,7 @@ impl CorsConfig {
 pub struct TlsConfig {
     cert_path: Option<PathBuf>,
     cert_key_path: Option<PathBuf>,
+    client_ca: Option<PathBuf>,
 }
 
 impl TlsConfig {
@@ -135,12 +136,35 @@ impl TlsConfig {
         self
     }
 
+    pub fn with_client_ca<P>(mut self, client_ca: P) -> Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.client_ca = Some(client_ca.into());
+        self
+    }
+
+    pub fn with_client_ca_path<P>(self, client_ca_path: P) -> Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.with_client_ca(client_ca_path)
+    }
+
     pub fn cert_path(&self) -> Option<&Path> {
         self.cert_path.as_deref()
     }
 
     pub fn cert_key_path(&self) -> Option<&Path> {
         self.cert_key_path.as_deref()
+    }
+
+    pub fn client_ca(&self) -> Option<&Path> {
+        self.client_ca.as_deref()
+    }
+
+    pub fn client_ca_path(&self) -> Option<&Path> {
+        self.client_ca()
     }
 
     pub(crate) fn validate(self) -> Result<ValidatedTlsConfig, ServerConfigError> {
@@ -154,6 +178,7 @@ impl TlsConfig {
         Ok(ValidatedTlsConfig {
             cert_path,
             cert_key_path,
+            client_ca: self.client_ca,
         })
     }
 }
@@ -162,6 +187,7 @@ impl TlsConfig {
 pub(crate) struct ValidatedTlsConfig {
     pub(crate) cert_path: PathBuf,
     pub(crate) cert_key_path: PathBuf,
+    pub(crate) client_ca: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug)]
