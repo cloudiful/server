@@ -1,6 +1,6 @@
 [package]
 name = "cloudiful-server"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2024"
 description = "Rust web server bootstrap crate with Actix and Axum adapters"
 readme = "README.md"
