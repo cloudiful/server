@@ -6,7 +6,8 @@ application routing.
 
 ## Features
 
-- Default: `actix`
+- Default: none
+- `actix`: Actix `App` startup with TLS and CORS helpers
 - `axum`: Axum `Router` startup with optional shared state
 - `mcp`: rmcp stdio helpers plus Streamable HTTP service, router, and server helpers
 - `tls`: omit `tls` for plain HTTP, set `cert_path` + `cert_key_path` for server TLS, and add `client_ca` for mTLS
@@ -59,7 +60,7 @@ against that CA bundle.
 
 ## Actix
 
-Enabled by default.
+Enable with `features = ["actix"]`.
 
 ```rust
 use actix_web::{HttpResponse, web};
@@ -172,6 +173,7 @@ let app = mcp::router(
 
 ```bash
 cargo test
+cargo test --features actix
 cargo test --features mcp
 cargo test --no-default-features --features axum
 cargo test --all-features

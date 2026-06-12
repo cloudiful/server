@@ -11,14 +11,14 @@ keywords = ["server", "actix", "axum", "tls", "bootstrap"]
 categories = ["web-programming", "network-programming", "asynchronous"]
 
 [features]
-default = ["actix"]
+default = []
 actix = ["dep:actix-cors", "dep:actix-web"]
 axum = ["dep:axum", "dep:axum-server", "dep:tower-http", "dep:tokio"]
 mcp = ["dep:axum", "dep:axum-server", "dep:rmcp", "dep:tokio", "dep:tokio-util"]
 
 [dependencies]
 actix-cors = { version = "0.7.1", optional = true }
-actix-web = { version = "4.13.0", optional = true, features = [ "rustls-0_23" ] }
+actix-web = { version = "4.13.0", optional = true, default-features = false, features = [ "macros", "rustls-0_23" ] }
 axum = { version = "0.8.9", optional = true }
 axum-server = { version = "0.8.0", optional = true, features = [ "tls-rustls" ] }
 http = "1.4.2"
