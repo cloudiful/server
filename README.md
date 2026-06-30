@@ -169,6 +169,44 @@ let app = mcp::router(
 `mcp::service` is the shared construction path. `mcp::router` and
 `mcp::Server` build on top of it.
 
+To support cross-instance Streamable HTTP session recovery, attach an external
+session store:
+
+```rust
+use std::sync::Arc;
+
+use cloudiful_server::mcp::{self, SessionStore};
+
+struct MyStore;
+
+#[async_trait::async_trait]
+impl SessionStore for MyStore {
+    async fn load(
+        &self,
+        session_id: &str,
+    ) -> Result<Option<mcp::SessionState>, mcp::SessionStoreError> {
+        let _ = session_id;
+        Ok(None)
+    }
+
+    async fn store(
+        &self,
+        session_id: &str,
+        state: &mcp::SessionState,
+    ) -> Result<(), mcp::SessionStoreError> {
+        let _ = (session_id, state);
+        Ok(())
+    }
+
+    async fn delete(&self, session_id: &str) -> Result<(), mcp::SessionStoreError> {
+        let _ = session_id;
+        Ok(())
+    }
+}
+
+let mcp_config = mcp::ServerConfig::new().with_session_store(Arc::new(MyStore));
+```
+
 ## Testing
 
 ```bash

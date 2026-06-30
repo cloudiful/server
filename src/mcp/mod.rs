@@ -5,6 +5,9 @@ mod tests;
 
 pub use http::{BoundServer, Server, ServerConfig, router, service};
 
+pub use rmcp::transport::streamable_http_server::session::{
+    SessionState, SessionStore, SessionStoreError,
+};
 pub use rmcp::{
     ErrorData as McpError, RoleServer, ServerHandler, ServiceExt, prompt, prompt_handler,
     prompt_router, tool, tool_handler, tool_router, transport,

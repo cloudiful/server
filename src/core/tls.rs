@@ -53,12 +53,13 @@ pub fn load_tls_config<U>(
     let builder = rustls::ServerConfig::builder();
     let builder = match tls.client_ca.as_ref() {
         Some(client_ca_path) => {
-            let mut client_ca_file = BufReader::new(File::open(client_ca_path).map_err(|source| {
-                ServerError::Tls(TlsConfigLoadError::OpenClientCa {
-                    path: client_ca_path.clone(),
-                    source,
-                })
-            })?);
+            let mut client_ca_file =
+                BufReader::new(File::open(client_ca_path).map_err(|source| {
+                    ServerError::Tls(TlsConfigLoadError::OpenClientCa {
+                        path: client_ca_path.clone(),
+                        source,
+                    })
+                })?);
 
             let client_ca_certs = rustls_pemfile::certs(&mut client_ca_file)
                 .collect::<Result<Vec<_>, _>>()
@@ -78,14 +79,15 @@ pub fn load_tls_config<U>(
                 }));
             }
 
-            let client_verifier = rustls::server::WebPkiClientVerifier::builder(Arc::new(client_roots))
-                .build()
-                .map_err(|source| {
-                    ServerError::Tls(TlsConfigLoadError::InvalidClientCa {
-                        path: client_ca_path.clone(),
-                        source: rustls::Error::General(source.to_string().into()),
-                    })
-                })?;
+            let client_verifier =
+                rustls::server::WebPkiClientVerifier::builder(Arc::new(client_roots))
+                    .build()
+                    .map_err(|source| {
+                        ServerError::Tls(TlsConfigLoadError::InvalidClientCa {
+                            path: client_ca_path.clone(),
+                            source: rustls::Error::General(source.to_string().into()),
+                        })
+                    })?;
 
             builder.with_client_cert_verifier(client_verifier)
         }

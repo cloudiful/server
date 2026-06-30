@@ -1,6 +1,7 @@
 use std::{
     future::Future,
     net::{SocketAddr, TcpListener},
+    sync::Arc,
     time::Duration,
 };
 
@@ -8,7 +9,8 @@ use axum::Router;
 use axum_server::tls_rustls::RustlsConfig;
 use log::info;
 use rmcp::transport::streamable_http_server::{
-    StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
+    StreamableHttpServerConfig, StreamableHttpService,
+    session::{SessionStore, local::LocalSessionManager},
 };
 use tokio_util::sync::CancellationToken;
 
@@ -26,6 +28,7 @@ pub struct ServerConfig {
     allowed_hosts: Vec<String>,
     allowed_origins: Vec<String>,
     cancellation_token: Option<CancellationToken>,
+    session_store: Option<Arc<dyn SessionStore>>,
 }
 
 impl Default for ServerConfig {
@@ -39,6 +42,7 @@ impl Default for ServerConfig {
             allowed_hosts: Vec::new(),
             allowed_origins: Vec::new(),
             cancellation_token: None,
+            session_store: None,
         }
     }
 }
@@ -106,6 +110,19 @@ impl ServerConfig {
         self
     }
 
+    pub fn with_session_store<T>(mut self, session_store: Arc<T>) -> Self
+    where
+        T: SessionStore,
+    {
+        self.session_store = Some(session_store);
+        self
+    }
+
+    pub fn without_session_store(mut self) -> Self {
+        self.session_store = None;
+        self
+    }
+
     fn service_path(&self) -> Result<String, McpServerError> {
         let path = self.service_path.trim();
         if path.is_empty() {
@@ -143,6 +160,7 @@ impl ServerConfig {
         if let Some(cancellation_token) = self.cancellation_token.clone() {
             config = config.with_cancellation_token(cancellation_token);
         }
+        config.session_store = self.session_store.clone();
 
         config
     }

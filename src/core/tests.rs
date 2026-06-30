@@ -276,8 +276,8 @@ fn perform_tls_handshake(
     client_config: rustls::ClientConfig,
 ) -> Result<(), rustls::Error> {
     let server_name = ServerName::try_from("localhost").unwrap();
-    let mut client = rustls::ClientConnection::new(std::sync::Arc::new(client_config), server_name)
-        .unwrap();
+    let mut client =
+        rustls::ClientConnection::new(std::sync::Arc::new(client_config), server_name).unwrap();
     let mut server = rustls::ServerConnection::new(std::sync::Arc::new(server_config)).unwrap();
     let mut client_to_server = Vec::new();
     let mut server_to_client = Vec::new();
@@ -311,5 +311,7 @@ fn perform_tls_handshake(
         }
     }
 
-    Err(rustls::Error::General("TLS handshake did not complete".to_string()))
+    Err(rustls::Error::General(
+        "TLS handshake did not complete".to_string(),
+    ))
 }

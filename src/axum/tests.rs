@@ -233,9 +233,12 @@ async fn tls_client_ca_is_loaded_for_axum_binding() {
         .build()
         .unwrap();
 
-    let bound = Server::new(config, Router::new().route("/health", get(|| async { "ok" })))
-        .bind()
-        .unwrap();
+    let bound = Server::new(
+        config,
+        Router::new().route("/health", get(|| async { "ok" })),
+    )
+    .bind()
+    .unwrap();
 
     assert!(bound.addrs().iter().all(|addr| addr.ip().is_loopback()));
 }
