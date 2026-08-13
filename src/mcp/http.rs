@@ -1,170 +1,18 @@
 use std::{
     future::Future,
     net::{SocketAddr, TcpListener},
-    sync::Arc,
-    time::Duration,
 };
 
 use axum::Router;
 use axum_server::tls_rustls::RustlsConfig;
 use log::info;
 use rmcp::transport::streamable_http_server::{
-    StreamableHttpServerConfig, StreamableHttpService,
-    session::{SessionStore, local::LocalSessionManager},
+    StreamableHttpService, session::local::LocalSessionManager,
 };
-use tokio_util::sync::CancellationToken;
 
 use crate::{ServerError, ValidatedServerConfig, load_tls_config};
 
-use super::{McpServerError, ServerHandler};
-
-#[derive(Clone, Debug)]
-pub struct ServerConfig {
-    service_path: String,
-    stateful_mode: bool,
-    json_response: bool,
-    sse_keep_alive: Option<Duration>,
-    sse_retry: Option<Duration>,
-    allowed_hosts: Vec<String>,
-    allowed_origins: Vec<String>,
-    cancellation_token: Option<CancellationToken>,
-    session_store: Option<Arc<dyn SessionStore>>,
-}
-
-impl Default for ServerConfig {
-    fn default() -> Self {
-        Self {
-            service_path: "/mcp".to_string(),
-            stateful_mode: true,
-            json_response: false,
-            sse_keep_alive: None,
-            sse_retry: None,
-            allowed_hosts: Vec::new(),
-            allowed_origins: Vec::new(),
-            cancellation_token: None,
-            session_store: None,
-        }
-    }
-}
-
-impl ServerConfig {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn with_service_path(mut self, service_path: impl Into<String>) -> Self {
-        self.service_path = service_path.into();
-        self
-    }
-
-    pub fn with_stateful_mode(mut self, stateful_mode: bool) -> Self {
-        self.stateful_mode = stateful_mode;
-        self
-    }
-
-    pub fn with_json_response(mut self, json_response: bool) -> Self {
-        self.json_response = json_response;
-        self
-    }
-
-    pub fn with_sse_keep_alive(mut self, sse_keep_alive: Duration) -> Self {
-        self.sse_keep_alive = Some(sse_keep_alive);
-        self
-    }
-
-    pub fn with_sse_retry(mut self, sse_retry: Duration) -> Self {
-        self.sse_retry = Some(sse_retry);
-        self
-    }
-
-    pub fn with_allowed_hosts<I, S>(mut self, allowed_hosts: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<String>,
-    {
-        self.allowed_hosts = allowed_hosts.into_iter().map(Into::into).collect();
-        self
-    }
-
-    pub fn disable_allowed_hosts(mut self) -> Self {
-        self.allowed_hosts.clear();
-        self
-    }
-
-    pub fn with_allowed_origins<I, S>(mut self, allowed_origins: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<String>,
-    {
-        self.allowed_origins = allowed_origins.into_iter().map(Into::into).collect();
-        self
-    }
-
-    pub fn disable_allowed_origins(mut self) -> Self {
-        self.allowed_origins.clear();
-        self
-    }
-
-    pub fn with_cancellation_token(mut self, cancellation_token: CancellationToken) -> Self {
-        self.cancellation_token = Some(cancellation_token);
-        self
-    }
-
-    pub fn with_session_store<T>(mut self, session_store: Arc<T>) -> Self
-    where
-        T: SessionStore,
-    {
-        self.session_store = Some(session_store);
-        self
-    }
-
-    pub fn without_session_store(mut self) -> Self {
-        self.session_store = None;
-        self
-    }
-
-    fn service_path(&self) -> Result<String, McpServerError> {
-        let path = self.service_path.trim();
-        if path.is_empty() {
-            return Err(McpServerError::invalid_service_path(
-                self.service_path.clone(),
-            ));
-        }
-
-        let mut normalized = path.trim_end_matches('/').to_string();
-        if normalized.is_empty() {
-            normalized.push('/');
-        }
-        if !normalized.starts_with('/') {
-            normalized.insert(0, '/');
-        }
-
-        Ok(normalized)
-    }
-
-    fn to_rmcp_config(&self) -> StreamableHttpServerConfig {
-        let mut config = StreamableHttpServerConfig::default()
-            .with_sse_keep_alive(self.sse_keep_alive)
-            .with_sse_retry(self.sse_retry)
-            .with_stateful_mode(self.stateful_mode)
-            .with_json_response(self.json_response)
-            .with_allowed_hosts(self.allowed_hosts.clone())
-            .with_allowed_origins(self.allowed_origins.clone());
-
-        if self.allowed_hosts.is_empty() {
-            config = config.disable_allowed_hosts();
-        }
-        if self.allowed_origins.is_empty() {
-            config = config.disable_allowed_origins();
-        }
-        if let Some(cancellation_token) = self.cancellation_token.clone() {
-            config = config.with_cancellation_token(cancellation_token);
-        }
-        config.session_store = self.session_store.clone();
-
-        config
-    }
-}
+use super::{McpServerError, ServerConfig, ServerHandler};
 
 pub fn service<F, S>(
     runtime_config: ServerConfig,
@@ -203,9 +51,14 @@ where
     F: Fn() -> S + Send + Sync + 'static,
     S: ServerHandler + 'static,
 {
+    let session_manager = match runtime_config.event_store() {
+        Some(event_store) => LocalSessionManager::default().with_event_store(event_store),
+        None => LocalSessionManager::default(),
+    };
+
     StreamableHttpService::new(
         move || Ok::<_, std::io::Error>(service_factory()),
-        LocalSessionManager::default().into(),
+        session_manager.into(),
         runtime_config.to_rmcp_config(),
     )
 }

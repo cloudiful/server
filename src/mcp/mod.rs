@@ -1,12 +1,15 @@
+mod config;
 mod http;
 
 #[cfg(test)]
 mod tests;
 
-pub use http::{BoundServer, Server, ServerConfig, router, service};
+pub use config::ServerConfig;
+pub use http::{BoundServer, Server, router, service};
 
 pub use rmcp::transport::streamable_http_server::session::{
-    SessionState, SessionStore, SessionStoreError,
+    EventId, EventStore, EventStoreError, EventStream, ServerSseMessage, SessionState,
+    SessionStore, SessionStoreError, StreamId,
 };
 pub use rmcp::{
     ErrorData as McpError, RoleServer, ServerHandler, ServiceExt, prompt, prompt_handler,

@@ -66,7 +66,7 @@ async fn service_path_is_normalized_for_http_router() {
     .oneshot(
         Request::builder()
             .uri("/mcp")
-            .header("host", "not-loopback.example")
+            .header("host", "127.0.0.1")
             .body(Body::empty())
             .unwrap(),
     )
@@ -87,7 +87,7 @@ async fn root_service_path_is_accepted() {
     .oneshot(
         Request::builder()
             .uri("/")
-            .header("host", "not-loopback.example")
+            .header("host", "127.0.0.1")
             .body(Body::empty())
             .unwrap(),
     )
@@ -107,12 +107,71 @@ async fn service_can_be_nested_in_existing_router() {
         .oneshot(
             Request::builder()
                 .uri("/mcp")
-                .header("host", "not-loopback.example")
+                .header("host", "127.0.0.1")
                 .body(Body::empty())
                 .unwrap(),
         )
         .await
         .unwrap();
+
+    assert_ne!(response.status(), StatusCode::NOT_FOUND);
+    assert_ne!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn default_host_validation_rejects_non_loopback_hosts() {
+    let response = crate::mcp::router(crate::mcp::ServerConfig::new(), || PingServer)
+        .unwrap()
+        .oneshot(
+            Request::builder()
+                .uri("/mcp")
+                .header("host", "evil.example")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn allowed_hosts_override_accepts_configured_hosts() {
+    let response = crate::mcp::router(
+        crate::mcp::ServerConfig::new().with_allowed_hosts(["mcp.example.com"]),
+        || PingServer,
+    )
+    .unwrap()
+    .oneshot(
+        Request::builder()
+            .uri("/mcp")
+            .header("host", "mcp.example.com")
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await
+    .unwrap();
+
+    assert_ne!(response.status(), StatusCode::NOT_FOUND);
+    assert_ne!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn disabled_host_validation_accepts_any_host() {
+    let response = crate::mcp::router(
+        crate::mcp::ServerConfig::new().disable_allowed_hosts(),
+        || PingServer,
+    )
+    .unwrap()
+    .oneshot(
+        Request::builder()
+            .uri("/mcp")
+            .header("host", "evil.example")
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await
+    .unwrap();
 
     assert_ne!(response.status(), StatusCode::NOT_FOUND);
     assert_ne!(response.status(), StatusCode::FORBIDDEN);

@@ -169,8 +169,79 @@ let app = mcp::router(
 `mcp::service` is the shared construction path. `mcp::router` and
 `mcp::Server` build on top of it.
 
-To support cross-instance Streamable HTTP session recovery, attach an external
-session store:
+### Host validation and protocol version
+
+By default the Streamable HTTP service only accepts loopback `Host` headers
+(`localhost`, `127.0.0.1`, `::1`) to prevent DNS rebinding attacks. Public
+deployments must allowlist their own hostnames:
+
+```rust
+let mcp_config = mcp::ServerConfig::new().with_allowed_hosts(["mcp.example.com"]);
+```
+
+`2026-07-28` protocol requests are always served statelessly.
+`with_legacy_session_mode` only controls whether clients negotiating an older
+protocol version get MCP sessions:
+
+```rust
+let mcp_config = mcp::ServerConfig::new().with_legacy_session_mode(false);
+```
+
+Additional Streamable HTTP options: `with_json_response`,
+`with_max_request_body_bytes`, and `with_stateless_protocol_metadata_required`.
+
+### Stateless SSE event recovery
+
+For cross-instance recovery of stateless SSE streams, attach a shared event
+store so clients can resume with `Last-Event-ID`:
+
+```rust
+use std::{collections::HashMap, sync::Arc};
+
+use tokio::sync::RwLock;
+use cloudiful_server::mcp::{
+    self, EventStore, EventStoreError, EventId, EventStream, ServerSseMessage,
+};
+
+#[derive(Default)]
+struct InMemoryEventStore(Arc<RwLock<HashMap<String, Vec<(EventId, ServerSseMessage)>>>>);
+
+#[async_trait::async_trait]
+impl EventStore for InMemoryEventStore {
+    async fn store_event(
+        &self,
+        stream_id: &str,
+        event: &ServerSseMessage,
+    ) -> Result<EventId, EventStoreError> {
+        let mut streams = self.0.write().await;
+        let events = streams.entry(stream_id.to_string()).or_default();
+        // The ID must be globally unique and identify its stream, because
+        // replay_events_after only receives the ID back.
+        let id = format!("{stream_id}:{}", events.len());
+        events.push((id.clone(), event.clone()));
+        Ok(id)
+    }
+
+    async fn replay_events_after(
+        &self,
+        last_event_id: &str,
+    ) -> Result<EventStream, EventStoreError> {
+        let streams = self.0.read().await;
+        let (stream_id, index) = last_event_id.rsplit_once(':').ok_or("invalid event id")?;
+        let index: usize = index.parse().map_err(|_| "invalid event id")?;
+        let events = streams.get(stream_id).cloned().unwrap_or_default();
+        let replayed = events.into_iter().skip(index + 1).map(|(_, event)| event);
+        Ok(Box::pin(futures::stream::iter(replayed)))
+    }
+}
+
+let mcp_config = mcp::ServerConfig::new().with_event_store(Arc::new(InMemoryEventStore::default()));
+```
+
+### Legacy session recovery
+
+To support cross-instance session recovery for legacy clients, attach an
+external session store:
 
 ```rust
 use std::sync::Arc;
